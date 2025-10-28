@@ -4,7 +4,7 @@
 #include <SD.h>
 
 #define CAM1_PIN 00
-#define CAM2_PIN 00
+#define CAM2_PIN 00         //WRITE PIN NUMBERS WHEN SELECTED
 #define SD_PIN 00
 
 
@@ -29,6 +29,7 @@ void clear(){
 }
 
 bool saveCurrentFrameToSD(Arducam_Mega& cam, const char* path) {
+    clear();
   // Open file first (with all CS high so SD is idle until selected by library)
   File f = SD.open(path, FILE_WRITE);
   if (!f) {
@@ -63,13 +64,14 @@ bool saveCurrentFrameToSD(Arducam_Mega& cam, const char* path) {
 }
 
 
-int initCam(Arducam_Mega &cam){
+bool initCam(Arducam_Mega &cam){
 
 
    clear();
 
     if(!cam.begin()){
-        //error starting the camera
+        Serial.println("Cam start failure");//error starting the camera
+        return false;
     }
 
     delay(50);
@@ -84,22 +86,36 @@ int initCam(Arducam_Mega &cam){
 
 void setup(){
 
+    Serial.begin(115200);
+    while (!Serial) { ; }
+
+    // SPI + CS pins
+    SPI.begin(); // default SPI pins for your board
+
 
     pinMode(CAM1_PIN, OUTPUT);
     pinMode(CAM2_PIN, OUTPUT);
     pinMode(SD_PIN,   OUTPUT);
     clear();
+    // SD card at requested SPI clock
+    if (!SD.begin((uint8_t)SD_PIN)) {
+        Serial.println(F("[ERR] SD.begin failed"));
+        while (1) delay(10);
+    }
+    // Cameras
+    if (!initCam(cam1) || !initCam(cam2)) {
+        Serial.println(F("[ERR] One/both cameras failed to init"));
+        while (1) delay(10);
+    }
 
-    initCam(cam1);
-    initCam(cam2);
-
+  Serial.println(F("[OK] Setup complete. Alternating captures..."));
 
 }
 
     bool cam1turn = true;
     int shot1 = 0;
     int shot2 = 0;
-    char cam1Path[] = {"/cam1_"};
+    char cam1Path[] = {"/cam1_"};       //NEED TO CHANGE BEFORE TESTING BEGINS!!!!!! THESE ARE TEMP
     char cam2Path[] = {"/cam2_"};    // filepath for cameras
 
     
@@ -112,7 +128,7 @@ void loop(){
     char path[32];
     snprintf(path, sizeof(path), "%s%lu.jpg",cam1Path, (unsigned long)shot1++);
     if (!saveCurrentFrameToSD(cam1, path)){
-        //error
+        Serial.println("Error");//error
     }
     } else {
         cam2.takePicture(IMAGE_MODE, PIXEL_FORMAT);
@@ -120,7 +136,7 @@ void loop(){
         char path[32];
         snprintf(path, sizeof(path), "%s%lu.jpg",cam2Path, (unsigned long)shot2++);
         if (!saveCurrentFrameToSD(cam2, path)){
-            //error
+            Serial.println("Error");//error
         }
     }
     cam1turn = !cam1turn;

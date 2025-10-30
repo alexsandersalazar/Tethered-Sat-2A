@@ -110,6 +110,8 @@ void setup(){
 
   Serial.println(F("[OK] Setup complete. Alternating captures..."));
 
+  //SD EXISTS /log.csv
+
 }
 
     bool cam1turn = true;
